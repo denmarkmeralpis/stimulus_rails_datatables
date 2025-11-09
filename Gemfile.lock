@@ -1,10 +1,10 @@
 PATH
   remote: .
   specs:
-    stimulus_rails_datatables (0.1.0)
+    stimulus_rails_datatables (0.1.1)
       ajax-datatables-rails (~> 1.4)
       importmap-rails (>= 2, < 3)
-      rails (>= 7.0)
+      rails (>= 7.0, < 8.3)
 
 GEM
   remote: https://rubygems.org/
