@@ -11,6 +11,10 @@ module StimulusRailsDatatables
         template 'stimulus_rails_datatables.rb', 'config/initializers/stimulus_rails_datatables.rb'
       end
 
+      def copy_config
+        template 'datatables_config.js', 'app/javascript/datatables_config.js'
+      end
+
       def show_readme
         readme 'README' if behavior == :invoke
       end
@@ -36,8 +40,9 @@ module StimulusRailsDatatables
         say "   application.register('filter', FilterController)"
         say "   window.AppDataTable = AppDataTable"
         say ''
-        say '3. Create your datatable classes inheriting from StimulusRailsDatatables::BaseDatatable'
-        say '4. Use the datatable_for and filter_for helpers in your views'
+        say '3. Customize app/javascript/datatables_config.js to override default settings'
+        say '4. Create your datatable classes inheriting from StimulusRailsDatatables::BaseDatatable'
+        say '5. Use the datatable_for and filter_for helpers in your views'
         say ''
         say 'For more information, see: https://github.com/denmarkmeralpis/stimulus_rails_datatables'
         say '=' * 80

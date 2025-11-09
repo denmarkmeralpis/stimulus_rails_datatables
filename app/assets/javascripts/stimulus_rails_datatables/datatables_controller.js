@@ -3,6 +3,7 @@
 
 import { AppDataTable } from 'stimulus_rails_datatables/app_datatable'
 import { Controller } from '@hotwired/stimulus'
+import { datatablesConfig } from 'stimulus_rails_datatables/config'
 
 export default class extends Controller {
   static values = {
@@ -79,8 +80,15 @@ export default class extends Controller {
     if (datatableWrapper === null) {
       Turbo.cache.exemptPageFromCache()
 
+      // Merge default config with user overrides
+      const config = {
+        language: { ...datatablesConfig.language },
+        layout: { ...datatablesConfig.layout },
+        lengthMenu: datatablesConfig.lengthMenu
+      }
+
       appDataTable = new AppDataTable(`#${datatableId}`, {
-        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+        lengthMenu: config.lengthMenu,
         searching: this.searchingValue,
         lengthChange: this.lengthChangeValue,
         processing: this.processingValue,
@@ -91,16 +99,8 @@ export default class extends Controller {
         order: this.orderValue,
         columns: this.columnsValue,
         responsive: true,
-        language: {
-          processing: '<div class="spinner-border"></div><div class="mt-2">Loading...</div>',
-          lengthMenu: 'show <span class="px-2">_MENU_</span> entries'
-        },
-        layout: {
-          topStart: 'pageLength',
-          topEnd: 'search',
-          bottomStart: 'info',
-          bottomEnd: 'paging'
-        }
+        language: config.language,
+        layout: config.layout
       })
     }
 
