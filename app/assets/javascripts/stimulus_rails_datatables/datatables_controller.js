@@ -75,17 +75,15 @@ export default class extends Controller {
   }
 
   initializeDataTable(url = this.sourceValue) {
-    const datatableId = this.idValue;
-    const datatableWrapper = document.getElementById(`${datatableId}_wrapper`);
-    let appDataTable = null;
+    const datatableId = this.idValue
+    const datatableWrapper = document.getElementById(`${datatableId}_wrapper`)
+    let appDataTable = null
 
     if (datatableWrapper === null) {
-      Turbo.cache.exemptPageFromCache();
+      Turbo.cache.exemptPageFromCache()
 
-      const config = this.datatablesConfig; // use injected config
-
-      appDataTable = new AppDataTable(`#${datatableId}`, {
-        lengthMenu: config.lengthMenu,
+      const options = {
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
         searching: this.searchingValue,
         lengthChange: this.lengthChangeValue,
         processing: this.processingValue,
@@ -96,9 +94,28 @@ export default class extends Controller {
         order: this.orderValue,
         columns: this.columnsValue,
         responsive: true,
-        language: config.language,
-        layout: config.layout
-      })
+        language: {
+          processing: '<div class="spinner-border"></div><div class="mt-2">Loading...</div>',
+          lengthMenu: 'show <span class="px-2">_MENU_</span> entries'
+        },
+        layout: {
+          topStart: 'pageLength',
+          topEnd: 'search',
+          bottomStart: 'info',
+          bottomEnd: 'paging'
+        }
+      }
+
+      // Add drawCallback to dispatch custom event
+      const appDataTable = new AppDataTable(`#${datatableId}`, options).table
+      if (appDataTable) {
+       appDataTable.on('draw', () => {
+          this.element.dispatchEvent(new CustomEvent('datatable:drawn', {
+            bubbles: true,
+            detail: { table: appDataTable }
+          }))
+        })
+      }
     }
 
     return appDataTable
