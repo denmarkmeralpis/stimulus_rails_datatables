@@ -1,5 +1,10 @@
 import DataTable from 'datatables.net-responsive-bs5'
 
+// Set global DataTables default for orderSequence
+Object.assign(DataTable.defaults.column, {
+  orderSequence: ['desc', 'asc']
+})
+
 class AppDataTable {
   constructor(selector, options) {
     // Initialize the DataTable just like the original one
