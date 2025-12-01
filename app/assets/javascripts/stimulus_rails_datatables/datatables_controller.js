@@ -17,8 +17,7 @@ export default class extends Controller {
     pagingType: { type: String, default: 'simple_numbers' },
     searching: { type: Boolean, default: true },
     lengthChange: { type: Boolean, default: true },
-    scrollX: { type: Boolean, default: false },
-    responsive: { type: Boolean, default: true }
+    scrollX: { type: Boolean, default: false }
   }
 
   connect() {
