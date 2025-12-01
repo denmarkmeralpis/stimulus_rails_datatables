@@ -88,7 +88,7 @@ export default class extends Controller {
         lengthChange: this.lengthChangeValue,
         processing: this.processingValue,
         serverSide: this.serverSideValue,
-        stateSave: this.stateSaveValue,
+        stateSave: false,
         ajax: url,
         pagingType: this.pagingTypeValue,
         order: this.orderValue,
