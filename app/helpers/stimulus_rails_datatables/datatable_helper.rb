@@ -7,7 +7,7 @@ module StimulusRailsDatatables
       searching = options.fetch(:searching, true)
       length_change = options.fetch(:length_change, true)
       state_save = options.fetch(:state_save, true)
-      scrollX = options.fetch(:scrollX, false)
+      scrollX = options.fetch(:scrollX, true)
       columns = []
 
       yield DatatableBuilder.new(columns)
