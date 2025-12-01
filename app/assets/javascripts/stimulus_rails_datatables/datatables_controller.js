@@ -94,7 +94,7 @@ export default class extends Controller {
         pagingType: this.pagingTypeValue,
         order: this.orderValue,
         columns: this.columnsValue,
-        responsive: true,
+        responsive: this.scrollXValue ? false : true,
         scrollX: this.scrollXValue,
         language: {
           processing: '<div class="spinner-border"></div><div class="mt-2">Loading...</div>',
@@ -109,7 +109,7 @@ export default class extends Controller {
       }
 
       // Add drawCallback to dispatch custom event
-      const appDataTable = new AppDataTable(`#${datatableId}`, options).table
+      appDataTable = new AppDataTable(`#${datatableId}`, options).table
       if (appDataTable) {
        appDataTable.on('draw', () => {
           this.element.dispatchEvent(new CustomEvent('datatable:drawn', {
