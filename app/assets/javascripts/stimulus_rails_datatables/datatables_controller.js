@@ -93,10 +93,8 @@ export default class extends Controller {
         pagingType: this.pagingTypeValue,
         order: this.orderValue,
         columns: this.columnsValue,
-        responsive: this.responsiveValue ? this.responsiveValue : false,
-        scrollX: true,
-        scrollCollapse: true,
-        autoWidth: false,
+        responsive: this.responsiveValue,
+        scrollX: this.responsiveValue? false : true,
         language: {
           processing: '<div class="spinner-border"></div><div class="mt-2">Loading...</div>',
           lengthMenu: 'show <span class="px-2">_MENU_</span> entries'
@@ -110,15 +108,15 @@ export default class extends Controller {
       }
 
       // Add drawCallback to dispatch custom event
-      appDataTable = new AppDataTable(`#${datatableId}`, options).table
-      if (appDataTable) {
-       appDataTable.on('draw', () => {
-          this.element.dispatchEvent(new CustomEvent('datatable:drawn', {
-            bubbles: true,
-            detail: { table: appDataTable }
-          }))
-        })
-      }
+      // appDataTable = new AppDataTable(`#${datatableId}`, options).table
+      // if (appDataTable) {
+      //  appDataTable.on('draw', () => {
+      //     this.element.dispatchEvent(new CustomEvent('datatable:drawn', {
+      //       bubbles: true,
+      //       detail: { table: appDataTable }
+      //     }))
+      //   })
+      // }
     }
 
     return appDataTable
