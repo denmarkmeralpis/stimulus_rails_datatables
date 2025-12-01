@@ -82,7 +82,7 @@ export default class extends Controller {
 
     if (datatableWrapper === null) {
       Turbo.cache.exemptPageFromCache()
-
+      console.log('scrollX value:', this.scrollXValue)
       const options = {
         lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
         searching: this.searchingValue,
@@ -94,8 +94,7 @@ export default class extends Controller {
         pagingType: this.pagingTypeValue,
         order: this.orderValue,
         columns: this.columnsValue,
-        responsive: false,
-        scrollX: this.scrollXValue,
+        scrollX: true,
         language: {
           processing: '<div class="spinner-border"></div><div class="mt-2">Loading...</div>',
           lengthMenu: 'show <span class="px-2">_MENU_</span> entries'
