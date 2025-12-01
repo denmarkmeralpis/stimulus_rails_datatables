@@ -105,6 +105,10 @@ export default class extends Controller {
           topEnd: 'search',
           bottomStart: 'info',
           bottomEnd: 'paging'
+        },
+        // add initComplete to run after DataTables initialization
+        initComplete: function(settings, json) {
+          $('.dataTables_scrollBody thead tr').css({visibility:'collapse'});
         }
       }
 
