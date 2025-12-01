@@ -94,7 +94,7 @@ export default class extends Controller {
         pagingType: this.pagingTypeValue,
         order: this.orderValue,
         columns: this.columnsValue,
-        responsive: this.responsiveValue,
+        responsive: true,
         scrollX: this.scrollXValue,
         language: {
           processing: '<div class="spinner-border"></div><div class="mt-2">Loading...</div>',
