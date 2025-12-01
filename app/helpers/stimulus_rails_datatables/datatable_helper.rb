@@ -7,7 +7,6 @@ module StimulusRailsDatatables
       searching = options.fetch(:searching, true)
       length_change = options.fetch(:length_change, true)
       state_save = options.fetch(:state_save, true)
-      scrollX = options.fetch(:scrollX, true)
       columns = []
 
       yield DatatableBuilder.new(columns)
@@ -20,8 +19,7 @@ module StimulusRailsDatatables
         datatable_columns_value: columns.to_json,
         datatable_searching_value: searching,
         datatable_length_change_value: length_change,
-        datatable_state_save_value: state_save,
-        datatable_scrollX_value: scrollX
+        datatable_state_save_value: state_save
       }
 
       content_tag(:div, data: data) do
