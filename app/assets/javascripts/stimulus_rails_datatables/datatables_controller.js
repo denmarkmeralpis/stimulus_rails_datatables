@@ -16,7 +16,8 @@ export default class extends Controller {
     processing: { type: Boolean, default: true },
     pagingType: { type: String, default: 'simple_numbers' },
     searching: { type: Boolean, default: true },
-    lengthChange: { type: Boolean, default: true }
+    lengthChange: { type: Boolean, default: true },
+    responsive: { type: Boolean, default: true }
   }
 
   connect() {
@@ -82,6 +83,7 @@ export default class extends Controller {
     if (datatableWrapper === null) {
       Turbo.cache.exemptPageFromCache()
 
+      const responsiveValue = this.responsiveValue
       const options = {
         lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
         searching: this.searchingValue,
@@ -93,7 +95,7 @@ export default class extends Controller {
         pagingType: this.pagingTypeValue,
         order: this.orderValue,
         columns: this.columnsValue,
-        responsive: true,
+        responsive: this.responsiveValue,
         language: {
           processing: '<div class="spinner-border"></div><div class="mt-2">Loading...</div>',
           lengthMenu: 'show <span class="px-2">_MENU_</span> entries'
@@ -103,6 +105,15 @@ export default class extends Controller {
           topEnd: 'search',
           bottomStart: 'info',
           bottomEnd: 'paging'
+        },
+        initComplete: function() {
+          if (responsiveValue === false) {
+            // Add overflow-x only to the table wrapper (not the whole layout) this is alternative of scrollX
+            const tableWrapper = document.querySelector(`#${datatableId}_wrapper .dt-layout-table`)
+            if (tableWrapper) {
+              tableWrapper.classList.add('overflow-x-scroll')
+            }
+          }
         }
       }
 

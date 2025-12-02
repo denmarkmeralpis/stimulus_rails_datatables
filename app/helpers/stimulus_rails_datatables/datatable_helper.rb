@@ -7,7 +7,7 @@ module StimulusRailsDatatables
       searching = options.fetch(:searching, true)
       length_change = options.fetch(:length_change, true)
       state_save = options.fetch(:state_save, true)
-      scroll_x = options.fetch(:scroll_x, false)
+      responsive = options.fetch(:responsive, true)
       columns = []
 
       yield DatatableBuilder.new(columns)
@@ -21,7 +21,7 @@ module StimulusRailsDatatables
         datatable_searching_value: searching,
         datatable_length_change_value: length_change,
         datatable_state_save_value: state_save,
-        datatable_scroll_x_value: scroll_x
+        datatable_responsive_value: responsive
       }
 
       content_tag(:div, data: data) do
