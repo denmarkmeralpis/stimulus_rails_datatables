@@ -23,6 +23,29 @@ And then execute:
 
 ```bash
 $ bundle install
+$ rails generate stimulus_rails_datatables:install
+```
+
+This will create:
+- `config/initializers/stimulus_rails_datatables.rb`
+- `app/javascript/datatables_config.js`
+
+### Setup JavaScript Controllers
+
+In `app/javascript/controllers/index.js`:
+
+```javascript
+import DatatableController from 'stimulus_rails_datatables/datatables_controller'
+import FilterController from 'stimulus_rails_datatables/filter_controller'
+
+application.register('datatable', DatatableController)
+application.register('filter', FilterController)
+```
+
+In `app/javascript/application.js`:
+
+```javascript
+import 'datatables_config'
 ```
 
 ## Usage
@@ -109,6 +132,9 @@ end
 ### JavaScript API
 
 ```javascript
+// Access via window.AppDataTable or import directly
+import { AppDataTable } from 'stimulus_rails_datatables/app_datatable'
+
 // Reload a specific datatable
 AppDataTable.reload('#users-table')
 
@@ -119,35 +145,68 @@ AppDataTable.load('#users-table', '/users?status=active')
 AppDataTable.reloadAll()
 ```
 
-## Configuration
+## Controller Setup
 
-The gem automatically registers Stimulus controllers and imports required JavaScript dependencies. The following controllers are available:
-
-- `datatable` - Main DataTable controller
-- `filter` - Filter controller with state management
-
-## Overriding Default Configuration
-To override the default DataTables configuration, create a file at `app/javascript/datatables_config.js` with your custom settings or run rails generator:
-
-```bash
-rails generate stimulus_rails_datatables:install
-```
-
-Once created, you can pin it in your importmap configuration:
+In your Rails controller, respond to JSON format for DataTables:
 
 ```ruby
-# config/importmap.rb
-pin 'datatables_config', to: 'datatables_config.js'
+class UsersController < ApplicationController
+  def index
+    respond_to do |format|
+      format.html
+      format.json { render json: UsersDatatable.new(view_context) }
+    end
+  end
+end
 ```
 
-Finally, import it in your application JavaScript:
+## Configuration
+
+### Customizing DataTables Settings
+
+Edit `app/javascript/datatables_config.js` to customize the DataTables appearance and behavior:
 
 ```javascript
-// app/javascript/application.js
-import 'datatables_config'
+window.datatablesConfig = {
+  // Language strings for DataTables UI
+  language: {
+    processing: '<div class="spinner-border"></div><div class="mt-2">Loading...</div>',
+    lengthMenu: '_MENU_',
+    search: `<div class="input-group">
+              <span class="input-group-text"><i class="material-symbols-outlined">search</i></span>
+              _INPUT_
+              <span class="input-group-text">
+                <kbd>ctrl + k</kbd>
+              </span>
+            </div>`,
+    info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+    paginate: {
+      first: 'First',
+      last: 'Last',
+      next: 'Next',
+      previous: 'Previous'
+    }
+  },
+
+  // Layout configuration
+  layout: {
+    topStart: 'pageLength',
+    topEnd: 'search',
+    bottomStart: 'info',
+    bottomEnd: 'paging'
+  },
+
+  // Length menu options
+  lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]]
+}
 ```
 
-Note: You may need to restart your Rails server for changes to take effect.
+### Available Stimulus Controllers
+
+The gem automatically registers the following Stimulus controllers:
+
+- `datatable` - Main DataTable controller with server-side processing
+- `filter` - Filter controller with state management and localStorage persistence
 
 ## Dependencies
 
