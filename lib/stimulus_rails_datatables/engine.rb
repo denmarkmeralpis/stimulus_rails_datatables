@@ -10,7 +10,7 @@ module StimulusRailsDatatables
     config.autoload_paths << File.expand_path('../../app/datatables', __dir__)
 
     initializer 'stimulus_rails_datatables.helpers' do
-      ActiveSupport.on_load(:action_controller) do
+      ActiveSupport.on_load(:action_controller_base) do
         helper StimulusRailsDatatables::DatatableHelper
         helper StimulusRailsDatatables::FilterHelper
       end
