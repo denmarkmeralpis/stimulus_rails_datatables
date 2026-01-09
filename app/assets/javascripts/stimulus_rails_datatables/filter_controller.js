@@ -7,10 +7,7 @@ export default class extends Controller {
   static targets = ['select', 'customFields']
 
   get filterDtId() {
-    const today = new Date()
-    const key = today.toISOString().split('T')[0]
-
-    return `${key}:${this.element.dataset.filterDatatableId}`
+    return this.element.dataset.filterDatatableId
   }
 
   connect() {
@@ -34,7 +31,7 @@ export default class extends Controller {
     // collect selects for later use
     this.selects = Array.from(this.element.querySelectorAll('select[data-filter-remote-url-value]'))
 
-    // if there are top-level remote selects we want them available for manual changes
+    // if there are remote selects with dependencies, disable them initially
     this.selects.forEach(select => {
       if (select.dataset.filterDependsOn) {
         select.disabled = true
@@ -83,12 +80,28 @@ export default class extends Controller {
     const valueKey = select.dataset.filterValueKey
     const placeholder = select.dataset.filterPlaceholder || 'Select'
 
+    // Replace URL template variables with actual values
     url = decodeURIComponent(url).replace(/{(\w+)}/g, (_, key) => {
       const input = this.element.querySelector(`[data-filter-field-name='${key}']`)
       return input ? input.value : ''
     })
 
-    if (!url) return
+    // Check if all dependencies are satisfied
+    if (select.dataset.filterDependsOn) {
+      const dependencies = this.getDependencies(select)
+      const allSatisfied = dependencies.every(depKey => {
+        const depEl = this.element.querySelector(`[data-filter-field-name='${depKey}']`)
+        return depEl && depEl.value
+      })
+
+      if (!allSatisfied) {
+        select.innerHTML = `<option value="">${placeholder}</option>`
+        select.disabled = true
+        return false
+      }
+    }
+
+    if (!url) return false
 
     try {
       const response = await fetch(url)
@@ -104,9 +117,11 @@ export default class extends Controller {
       })
 
       select.disabled = false
+      return true
     } catch (e) {
       console.error('[Filter] fetch error:', e)
       select.disabled = false
+      return false
     }
   }
 
@@ -145,6 +160,24 @@ export default class extends Controller {
     }
   }
 
+  // Helper to set select value, ensuring the option exists
+  setSelectValue(select, value) {
+    if (!value) return false
+
+    // Check if the option exists
+    const optionExists = Array.from(select.options).some(opt => opt.value === value)
+
+    if (optionExists) {
+      select.value = value
+      // Trigger change event if needed for any listeners
+      // select.dispatchEvent(new Event('change', { bubbles: true }))
+      return true
+    } else {
+      console.warn(`[Filter] Option with value "${value}" not found in select "${select.dataset.filterFieldName}"`)
+      return false
+    }
+  }
+
   // restoreState waits for all remote populates+restore to finish,
   // then dispatches "filters:ready" with { params: currentParams() }
   async restoreState() {
@@ -152,10 +185,20 @@ export default class extends Controller {
     const rootKey = this.element.dataset.filterRootKey
     const savedParams = saved[rootKey] || {}
 
-    // restore simple (non-remote) fields immediately
+    // First, restore all non-remote select fields (static dropdowns)
+    this.element.querySelectorAll('select:not([data-filter-remote-url-value])[data-filter-field-name]').forEach(select => {
+      const key = select.dataset.filterFieldName
+      if (savedParams[key]) {
+        this.setSelectValue(select, savedParams[key])
+      }
+    })
+
+    // restore simple non-select input fields (text, date, etc.)
     Object.entries(savedParams).forEach(([key, value]) => {
       const el = this.element.querySelector(`[data-filter-field-name='${key}']`)
-      if (el && !el.dataset.filterRemoteUrlValue) el.value = value
+      if (el && !el.dataset.filterRemoteUrlValue && el.tagName !== 'SELECT') {
+        el.value = value
+      }
     })
 
     // collect remote selects (as an array)
@@ -166,13 +209,21 @@ export default class extends Controller {
 
     // populate each root -> then recursively populate dependents and restore values
     await Promise.all(roots.map(async (root) => {
-      await this.populate(root)
+      const populated = await this.populate(root)
       // after root options exist, restore saved root value (if any)
-      const sv = savedParams[root.dataset.filterFieldName]
-      if (sv) root.value = sv
+      if (populated) {
+        const sv = savedParams[root.dataset.filterFieldName]
+        if (sv) {
+          this.setSelectValue(root, sv)
+        }
+      }
       // cascade down children
       await this.populateDependents(root, savedParams)
     }))
+
+    // After all roots and their cascades, check for any dependent selects that have
+    // ALL their dependencies satisfied (important for multi-dependency selects)
+    await this.populateAllSatisfiedDependents(savedParams)
 
     // restore start_date/end_date fields if duration was 'custom'
     if (savedParams['duration'] === 'custom') {
@@ -196,22 +247,97 @@ export default class extends Controller {
     try {
       localStorage.setItem(`filterState:${this.filterDtId}`, JSON.stringify(payload))
     } catch (e) {}
+
+    // Reload the datatable with restored filters
+    if (Object.keys(savedParams).length > 0) {
+      this.reloadAppDatatable()
+    }
+  }
+
+  // Helper to get dependencies as an array (supports comma-separated values)
+  getDependencies(select) {
+    const dependsOn = select.dataset.filterDependsOn
+    if (!dependsOn) return []
+    return dependsOn.split(',').map(dep => dep.trim()).filter(Boolean)
+  }
+
+  // Populate all dependent selects that have all their dependencies satisfied
+  // Process in waves to handle multi-level dependencies
+  async populateAllSatisfiedDependents(savedParams = {}) {
+    const maxIterations = 10 // Prevent infinite loops
+    let iteration = 0
+    let anyPopulated = true
+
+    while (anyPopulated && iteration < maxIterations) {
+      anyPopulated = false
+      iteration++
+
+      // Get all dependent selects that aren't yet populated (disabled or no options)
+      const dependents = this.selects.filter(s => {
+        if (!s.dataset.filterDependsOn) return false
+        // Check if it's already populated (enabled and has options beyond placeholder)
+        return s.disabled || s.options.length <= 1
+      })
+
+      for (const select of dependents) {
+        const allDeps = this.getDependencies(select)
+        const allSatisfied = allDeps.every(depKey => {
+          const depEl = this.element.querySelector(`[data-filter-field-name='${depKey}']`)
+          return depEl && depEl.value
+        })
+
+        if (allSatisfied) {
+          const populated = await this.populate(select)
+          if (populated) {
+            anyPopulated = true
+            // Restore saved value if exists
+            const savedValue = savedParams[select.dataset.filterFieldName]
+            if (savedValue) {
+              this.setSelectValue(select, savedValue)
+            }
+          }
+        }
+      }
+    }
   }
 
   // recursively populate children of parent, restore each child's saved value, then recurse
   async populateDependents(parent, savedParams = {}) {
     this.selects = this.selects || Array.from(this.element.querySelectorAll('select[data-filter-remote-url-value]'))
     const parentKey = parent.dataset.filterFieldName
-    const children = this.selects.filter(s => s.dataset.filterDependsOn === parentKey)
+
+    // Find children that depend on this parent (supports multiple dependencies)
+    const children = this.selects.filter(s => {
+      const deps = this.getDependencies(s)
+      return deps.includes(parentKey)
+    })
 
     for (const child of children) {
-      // populate child using parent's current value substituted by populate()
-      await this.populate(child)
-      // restore child's saved value if exists
-      const childSaved = savedParams[child.dataset.filterFieldName]
-      if (childSaved) child.value = childSaved
-      // recurse deeper
-      await this.populateDependents(child, savedParams)
+      // Check if all dependencies are satisfied before populating
+      const allDeps = this.getDependencies(child)
+      const allSatisfied = allDeps.every(depKey => {
+        const depEl = this.element.querySelector(`[data-filter-field-name='${depKey}']`)
+        return depEl && depEl.value
+      })
+
+      if (allSatisfied) {
+        // populate child using parent's current value substituted by populate()
+        const populated = await this.populate(child)
+        // restore child's saved value if exists and populate was successful
+        if (populated) {
+          const childSaved = savedParams[child.dataset.filterFieldName]
+          if (childSaved) {
+            this.setSelectValue(child, childSaved)
+          }
+        }
+        // recurse deeper
+        await this.populateDependents(child, savedParams)
+      } else {
+        // Reset child if dependencies are not satisfied
+        child.value = ''
+        child.innerHTML = `<option value="">${child.dataset.filterPlaceholder || 'Select'}</option>`
+        child.disabled = true
+      }
     }
   }
 

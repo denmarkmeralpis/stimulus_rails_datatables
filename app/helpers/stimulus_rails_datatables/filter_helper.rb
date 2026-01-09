@@ -40,12 +40,21 @@ module StimulusRailsDatatables
           remote = options[:remote] || {}
           depends_on = options[:depends_on]
 
+          # Convert depends_on to comma-separated string if it's an array
+          depends_on_str = if depends_on.is_a?(Array)
+                             depends_on.join(',')
+                           elsif depends_on
+                             depends_on.to_s
+                           else
+                             nil
+                           end
+
           attrs = {
             filter_field_name: name,
             filter_remote_url_value: remote[:url],
             filter_label_key: remote[:label],
             filter_value_key: remote[:value],
-            filter_depends_on: depends_on&.to_s,
+            filter_depends_on: depends_on_str,
             filter_placeholder: remote[:placeholder] || 'Select an option'
           }
 
@@ -63,6 +72,8 @@ module StimulusRailsDatatables
 
       def location(province_url:, city_url:, barangay_url:, **options)
         html_class = options[:class] || 'form-select'
+        city_depends_on = options[:city_depends_on] || :province_id
+        barangay_depends_on = options[:barangay_depends_on] || :city_id
 
         province = province_id(
           remote: {
@@ -81,7 +92,7 @@ module StimulusRailsDatatables
             value: 'location_id',
             placeholder: 'All Cities'
           },
-          depends_on: :province_id,
+          depends_on: city_depends_on,
           class: html_class
         )
 
@@ -92,7 +103,7 @@ module StimulusRailsDatatables
             value: 'location_id',
             placeholder: 'All Barangays'
           },
-          depends_on: :city_id,
+          depends_on: barangay_depends_on,
           class: html_class
         )
 
