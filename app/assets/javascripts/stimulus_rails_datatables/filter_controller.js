@@ -9,7 +9,6 @@ export default class extends Controller {
   get filterDtId() {
     const today = new Date()
     const key = today.toISOString().split('T')[0]
-
     return `${key}:${this.element.dataset.filterDatatableId}`
   }
 
@@ -176,7 +175,9 @@ export default class extends Controller {
       await this.populate(root)
       // after root options exist, restore saved root value (if any)
       const sv = savedParams[root.dataset.filterFieldName]
-      if (sv) root.value = sv
+      const set_value = root.dataset.filterSetValue || ''
+
+      if (sv && !set_value) root.value = sv
       // cascade down children
       await this.populateDependents(root, savedParams)
     }))
@@ -216,7 +217,11 @@ export default class extends Controller {
       await this.populate(child)
       // restore child's saved value if exists
       const childSaved = savedParams[child.dataset.filterFieldName]
-      if (childSaved) child.value = childSaved
+      const set_value = child.dataset.filterSetValue || ''
+
+      if (childSaved && !set_value) {
+        child.value = childSaved
+      }
       // recurse deeper
       await this.populateDependents(child, savedParams)
     }

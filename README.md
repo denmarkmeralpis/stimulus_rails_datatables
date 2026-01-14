@@ -73,13 +73,16 @@ import 'datatables_config'
     <%= opts.option 'inactive', 'Inactive' %>
   <% end %>
 
+# If set_value matches, it will be mark as selected
+# When set_value is present, localStorage restoration is skipped
+# so the default is not overridden on page reload.
   <%= f.role(
     remote: {
       url: roles_path,
       label: 'name',
       value: 'id',
       placeholder: 'Select Role',
-      set_value: 1 # If set_value matches, it will be mark as selected
+      set_value: 1 
     }
   ) %>
 
