@@ -17,14 +17,14 @@ export default class extends Controller {
     this.restoreState()
 
     // single delegated listener — saves and triggers dependent populates
-    this.element.addEventListener('change', (event) => {
+    this.element.addEventListener('change', async (event) => {
       if (!event.target.matches('[data-filter-field-name]')) return
 
-      // persist the user's change
-      this.saveState()
+      // if this field has dependents, reset stale child values and re-populate them
+      await this.populateDependents(event.target)
 
-      // if this field has dependents, re-populate them
-      this.populateDependents(event.target, this.currentParams()[this.element.dataset.filterRootKey] || {})
+      // persist the user's change after dependent filters have been cleaned up
+      this.saveState()
 
       // trigger datatable reload
       this.reloadAppDatatable()
@@ -80,7 +80,6 @@ export default class extends Controller {
     let url = select.dataset.filterRemoteUrlValue
     const labelKey = select.dataset.filterLabelKey
     const valueKey = select.dataset.filterValueKey
-    const placeholder = select.dataset.filterPlaceholder || 'Select'
     const set_value = select.dataset.filterSetValue || ''
 
     url = decodeURIComponent(url).replace(/{(\w+)}/g, (_, key) => {
@@ -95,7 +94,7 @@ export default class extends Controller {
       if (!response.ok) throw new Error(`Failed to fetch ${url}`)
       const data = await response.json()
 
-      select.innerHTML = `<option value="">${placeholder}</option>`
+      this.resetSelect(select, false)
       data.forEach(item => {
         const option = document.createElement('option')
         option.value = item[valueKey]
@@ -114,6 +113,19 @@ export default class extends Controller {
       console.error('[Filter] fetch error:', e)
       select.disabled = false
     }
+  }
+
+  resetSelect(select, disabled = true) {
+    const placeholder = select.dataset.filterPlaceholder || 'Select'
+    const option = document.createElement('option')
+
+    option.value = ''
+    option.textContent = placeholder
+
+    select.innerHTML = ''
+    select.appendChild(option)
+    select.value = ''
+    select.disabled = disabled
   }
 
   currentParams() {
@@ -213,6 +225,13 @@ export default class extends Controller {
     const children = this.selects.filter(s => s.dataset.filterDependsOn === parentKey)
 
     for (const child of children) {
+      this.resetSelect(child)
+
+      if (!parent.value) {
+        await this.populateDependents(child, savedParams)
+        continue
+      }
+
       // populate child using parent's current value substituted by populate()
       await this.populate(child)
       // restore child's saved value if exists

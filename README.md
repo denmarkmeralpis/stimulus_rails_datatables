@@ -95,6 +95,92 @@ import 'datatables_config'
 <% end %>
 ```
 
+#### Dependent Location Filters
+
+Use dependent remote selects when one filter should load its options from the value of another filter. The built-in `location` helper creates three filters named `province_id`, `city_id`, and `barangay_id`.
+
+```ruby
+<%= filter_for 'locations-table' do |f| %>
+  <%= f.location(
+    province_url: provinces_path(format: :json),
+    city_url: cities_path(province_id: '{province_id}', format: :json),
+    barangay_url: barangays_path(city_id: '{city_id}', format: :json)
+  ) %>
+<% end %>
+
+<%= datatable_for 'locations-table', source: locations_path(format: :json) do |dt| %>
+  <% dt.column :name, title: 'Name' %>
+  <% dt.column :province_name, title: 'Province' %>
+  <% dt.column :city_name, title: 'City' %>
+  <% dt.column :barangay_name, title: 'Barangay' %>
+<% end %>
+```
+
+The `{province_id}` and `{city_id}` placeholders are replaced in the browser before fetching the next select's options:
+
+- changing province fetches `cities_path(... province_id: selected_province_id)`
+- changing city fetches `barangays_path(... city_id: selected_city_id)`
+- changing any filter reloads the datatable with params such as `filters[province_id]=1&filters[city_id]=2`
+
+Your JSON endpoints should return an array using the keys configured by the helper: `location_id` for the option value and `name` for the label.
+
+```ruby
+class ProvincesController < ApplicationController
+  def index
+    render json: Province.select(:location_id, :name)
+  end
+end
+
+class CitiesController < ApplicationController
+  def index
+    cities = City.where(province_id: params[:province_id])
+    render json: cities.select(:location_id, :name)
+  end
+end
+
+class BarangaysController < ApplicationController
+  def index
+    barangays = Barangay.where(city_id: params[:city_id])
+    render json: barangays.select(:location_id, :name)
+  end
+end
+```
+
+Then apply the selected filters inside your datatable class:
+
+```ruby
+def get_raw_records
+  Location.all.then { |relation| apply_filters(relation) }
+end
+
+def apply_filters(relation)
+  relation = relation.where(province_id: query_filters[:province_id]) if query_filters[:province_id].present?
+  relation = relation.where(city_id: query_filters[:city_id]) if query_filters[:city_id].present?
+  relation = relation.where(barangay_id: query_filters[:barangay_id]) if query_filters[:barangay_id].present?
+  relation
+end
+```
+
+To load the table already filtered from the page URL, use normal nested filter params:
+
+```text
+/locations?filters[province_id]=1&filters[city_id]=2&filters[barangay_id]=3
+```
+
+Pass those params into the datatable source on the initial render:
+
+```ruby
+<% location_filters = params[:filters]&.permit(:province_id, :city_id, :barangay_id) || {} %>
+
+<%= datatable_for 'locations-table',
+  source: locations_path(format: :json, filters: location_filters) do |dt| %>
+  <% dt.column :name, title: 'Name' %>
+  <% dt.column :province_name, title: 'Province' %>
+  <% dt.column :city_name, title: 'City' %>
+  <% dt.column :barangay_name, title: 'Barangay' %>
+<% end %>
+```
+
 ### Backend DataTable Class
 
 ```ruby
