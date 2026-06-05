@@ -63,6 +63,20 @@ import 'datatables_config'
 <% end %>
 ```
 
+#### Custom Header Content
+
+Pass a block to render custom HTML in the column header instead of using `title:`.
+
+```ruby
+<%= datatable_for 'users-table', source: users_path do |dt| %>
+  <% dt.column :name, title: 'Name' %>
+
+  <% dt.column class: 'text-center' do %>
+    <div>My Custom Div</div>
+  <% end %>
+<% end %>
+```
+
 #### With Filters
 
 ```ruby

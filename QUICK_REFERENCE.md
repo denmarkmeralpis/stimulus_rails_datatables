@@ -37,6 +37,16 @@ window.AppDataTable = AppDataTable
 <% end %>
 ```
 
+### Custom Header Content
+
+```ruby
+<%= datatable_for 'users-table', source: users_path do |dt| %>
+  <% dt.column class: 'text-center' do %>
+    <div>My Custom Div</div>
+  <% end %>
+<% end %>
+```
+
 ### With Filters
 
 ```ruby

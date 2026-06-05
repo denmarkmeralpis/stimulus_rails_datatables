@@ -17,7 +17,7 @@ module StimulusRailsDatatables
 
       private
 
-      def readme(filename)
+      def readme(_filename)
         say ''
         say '=' * 80
         say 'StimulusRailsDatatables has been installed!'
@@ -34,7 +34,7 @@ module StimulusRailsDatatables
         say ''
         say "   application.register('datatable', DatatableController)"
         say "   application.register('filter', FilterController)"
-        say "   window.AppDataTable = AppDataTable"
+        say '   window.AppDataTable = AppDataTable'
         say ''
         say '3. Import app/javascript/datatables_config.js in your application.js:'
         say ''

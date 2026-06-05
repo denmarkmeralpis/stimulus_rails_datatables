@@ -25,8 +25,8 @@ Gem::Specification.new do |spec|
 
   # Runtime dependencies
   spec.add_dependency 'ajax-datatables-rails', '~> 1.4'
-  spec.add_dependency 'rails', '>= 7.0', '< 8.3'
   spec.add_dependency 'importmap-rails', '>= 2', '< 3'
+  spec.add_dependency 'rails', '>= 7.0', '< 8.3'
 
   # Development dependencies
   spec.add_development_dependency 'rspec-rails', '~> 6.0'
