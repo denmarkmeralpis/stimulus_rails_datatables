@@ -96,7 +96,7 @@ Pass a block to render custom HTML in the column header instead of using `title:
       label: 'name',
       value: 'id',
       placeholder: 'Select Role',
-      set_value: 1 
+      set_value: 1
     }
   ) %>
 
@@ -231,6 +231,40 @@ class UserDatatable < StimulusRailsDatatables::BaseDatatable
     relation
   end
 end
+```
+
+### Additional Data
+
+You can return extra fields alongside the standard DataTables JSON response by defining `additional_data` in your datatable class. This is useful for displaying aggregate stats (e.g. counts, totals) that are scoped to the current filtered result set.
+
+```ruby
+class OrdersDatatable < StimulusRailsDatatables::BaseDatatable
+  def additional_data
+    { unread_orders_count: get_raw_records.where(is_read: false).count }
+  end
+
+  # ...
+end
+```
+
+Any element with a `data-datatable-field` attribute matching a key from `additional_data` will have its text content updated automatically after every draw (page change, sort, filter):
+
+```html
+<span data-datatable-field="unread_orders_count">0</span> unread orders
+```
+
+When you have **multiple datatables on the same page**, scope the element to a specific table using `data-for-datatable`:
+
+```html
+<span data-datatable-field="unread_orders_count" data-for-datatable="orders-table">0</span>
+```
+
+You can also listen for the `datatable:additional-data` event for custom JavaScript handling:
+
+```javascript
+document.addEventListener('datatable:additional-data', (e) => {
+  console.log(e.detail) // { unread_orders_count: 5 }
+})
 ```
 
 ### JavaScript API

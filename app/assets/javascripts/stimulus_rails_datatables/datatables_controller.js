@@ -127,6 +127,34 @@ export default class extends Controller {
             detail: { table: appDataTable }
           }))
         })
+
+        // Dispatch additional_data returned by the server alongside standard DataTables fields
+        const STANDARD_DT_KEYS = new Set(['draw', 'recordsTotal', 'recordsFiltered', 'data', 'error'])
+        appDataTable.on('xhr', (_e, _settings, json) => {
+          if (!json) return
+          const additionalData = Object.fromEntries(
+            Object.entries(json).filter(([key]) => !STANDARD_DT_KEYS.has(key))
+          )
+          if (Object.keys(additionalData).length === 0) return
+
+          // Dispatch event so consumers can react programmatically
+          this.element.dispatchEvent(new CustomEvent('datatable:additional-data', {
+            bubbles: true,
+            detail: additionalData
+          }))
+
+          // Auto-update elements: <span data-datatable-field="unread_orders_count">
+          // Scope with optional data-for-datatable="<id>" to support multiple tables per page
+          // Single DOM query for all field elements, then group by field name to avoid N queries per key
+          document.querySelectorAll('[data-datatable-field]').forEach(el => {
+            const key = el.dataset.datatableField
+            if (!(key in additionalData)) return
+            const forId = el.dataset.forDatatable
+            if (!forId || forId === datatableId) {
+              el.textContent = additionalData[key]
+            }
+          })
+        })
       }
     }
 
