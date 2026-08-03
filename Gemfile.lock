@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    stimulus_rails_datatables (0.5.1)
+    stimulus_rails_datatables (0.6.0)
       ajax-datatables-rails (~> 1.4)
       importmap-rails (>= 2, < 3)
       rails (>= 7.0, < 8.3)
