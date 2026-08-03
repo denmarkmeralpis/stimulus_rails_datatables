@@ -2,6 +2,7 @@
 // Disabling eslint since this is a library file and may not conform to all rules
 
 import { Controller } from '@hotwired/stimulus'
+import TomSelect from 'tom-select'
 
 export default class extends Controller {
   static targets = ['select', 'customFields']
@@ -13,6 +14,45 @@ export default class extends Controller {
   }
 
   connect() {
+    this.tomSelects = new Map()
+    this.remoteSelects = Array.from(
+      this.element.querySelectorAll('select[data-filter-remote-url-value]')
+    )
+
+    this.remoteSelects.forEach(select => {
+      if (select.dataset.filterTomselect !== 'true') return
+
+      const isMultiple = select.multiple
+      const ts = new TomSelect(select, {
+        maxItems: isMultiple ? null : 1,
+        placeholder: select.dataset.filterPlaceholder || 'Select',
+        create: false,
+        hideSelected: isMultiple ? false : undefined,
+        render: isMultiple ? { item: () => '<div class="ts-hidden-item"></div>' } : {}
+      })
+
+      if (isMultiple) {
+        const originalOnOptionSelect = ts.onOptionSelect.bind(ts)
+        ts.onOptionSelect = (evt, option) => {
+          const value = option.dataset.value
+          if (ts.items.includes(value)) {
+            evt.preventDefault()
+            ts.removeItem(value)
+            ts.refreshOptions(false)
+          } else {
+            originalOnOptionSelect(evt, option)
+          }
+        }
+        this.updateSummaryLabel(select, ts)
+        ts.on('item_add', () => this.updateSummaryLabel(select, ts))
+        ts.on('item_remove', () => this.updateSummaryLabel(select, ts))
+      }
+
+      this.tomSelects.set(select, ts)
+
+      if (select.dataset.filterDependsOn) ts.disable()
+    })
+
     // begin restore; it is async but will dispatch filters:ready when done
     this.restoreState()
 
@@ -29,16 +69,50 @@ export default class extends Controller {
       // trigger datatable reload
       this.reloadAppDatatable()
     })
+  }
 
-    // collect selects for later use
-    this.selects = Array.from(this.element.querySelectorAll('select[data-filter-remote-url-value]'))
+  disconnect() {
+    this.tomSelects?.forEach(ts => ts.destroy())
+    this.tomSelects?.clear()
+  }
 
-    // if there are top-level remote selects we want them available for manual changes
-    this.selects.forEach(select => {
-      if (select.dataset.filterDependsOn) {
-        select.disabled = true
-      }
-    })
+  // --- helpers: single source of truth for reading/writing a field, Tom-Select-aware ---
+  getFieldValue(el) {
+    const ts = this.tomSelects.get(el)
+    return ts ? ts.getValue() : el.value
+  }
+
+  isValueEmpty(value) {
+    return Array.isArray(value) ? value.length === 0 : !value
+  }
+
+  setFieldValue(el, value, silent = true) {
+    const ts = this.tomSelects.get(el)
+    if (ts) ts.setValue(value, silent)
+    else el.value = value
+  }
+
+  updateSummaryLabel(select, ts) {
+    const count = ts.items.length
+    const placeholder = select.dataset.filterPlaceholder || 'Select'
+
+    let label = ts.control.querySelector('.ts-summary-label')
+    if (!label) {
+      label = document.createElement('div')
+      label.className = 'ts-summary-label'
+      ts.control.prepend(label)
+    }
+
+    const hasSelection = count > 0
+    label.textContent = hasSelection ? `${count} Barangay${count > 1 ? 's' : ''} selected` : ''
+    label.style.display = hasSelection ? 'block' : 'none'
+
+    if (hasSelection) {
+      ts.control_input.style.setProperty('display', 'none', 'important')
+    } else {
+      ts.control_input.style.removeProperty('display')
+      ts.control_input.setAttribute('placeholder', placeholder)
+    }
   }
 
   toQuery(obj, prefix) {
@@ -47,7 +121,10 @@ export default class extends Controller {
     for (const [key, value] of Object.entries(obj)) {
       const fullKey = prefix ? `${prefix}[${key}]` : key
 
-      if (value !== null && typeof value === 'object') {
+      if (Array.isArray(value)) {
+        value.forEach(v => pairs.push(`${encodeURIComponent(fullKey)}[]=${encodeURIComponent(v)}`))
+      }
+      else if (value !== null && typeof value === 'object') {
         pairs.push(this.toQuery(value, fullKey))
       }
       else if (value !== '' && value !== null && value !== undefined) {
@@ -72,15 +149,16 @@ export default class extends Controller {
 
       datatable.ajax.url(`${datatableUrl}?${params}`).load(null, false)
     }
-
   }
 
   // async populate returns when options appended
   async populate(select) {
+    const ts = this.tomSelects.get(select)
     let url = select.dataset.filterRemoteUrlValue
     const labelKey = select.dataset.filterLabelKey
     const valueKey = select.dataset.filterValueKey
-    const set_value = select.dataset.filterSetValue || ''
+    const setValues = (select.dataset.filterSetValues || select.dataset.filterSetValue || '')
+      .split(',').map(v => v.trim()).filter(Boolean)
 
     url = decodeURIComponent(url).replace(/{(\w+)}/g, (_, key) => {
       const input = this.element.querySelector(`[data-filter-field-name='${key}']`)
@@ -94,38 +172,54 @@ export default class extends Controller {
       if (!response.ok) throw new Error(`Failed to fetch ${url}`)
       const data = await response.json()
 
-      this.resetSelect(select, false)
-      data.forEach(item => {
-        const option = document.createElement('option')
-        option.value = item[valueKey]
-        option.textContent = item[labelKey]
-
-        // If set_value matches, mark as selected
-        if (set_value && item[valueKey] == set_value) {
-          option.selected = true
+      if (ts) {
+        ts.clear(true)            // clear current selection (silent — no change event)
+        ts.clearOptions()         // wipe stale option list
+        if (!select.multiple) {
+          const placeholder = select.dataset.filterPlaceholder || 'All'
+          ts.addOption({ value: '', text: placeholder })
         }
+        ts.addOptions(data.map(item => ({ value: String(item[valueKey]), text: item[labelKey] })))
+        if (setValues.length) this.setFieldValue(select, select.multiple ? setValues : setValues[0])
+        ts.enable()
+        if (select.multiple) this.updateSummaryLabel(select, ts)
+      } else {
+        select.innerHTML = ''
 
-        select.appendChild(option)
-      })
+        const placeholder = select.dataset.filterPlaceholder || 'All'
+        const blankOption = document.createElement('option')
+        blankOption.value = ''
+        blankOption.textContent = placeholder
+        select.appendChild(blankOption)
 
-      select.disabled = false
+        data.forEach(item => {
+          const option = document.createElement('option')
+          option.value = item[valueKey]
+          option.textContent = item[labelKey]
+          if (setValues.includes(String(item[valueKey]))) option.selected = true
+          select.appendChild(option)
+        })
+        select.disabled = false
+      }
     } catch (e) {
       console.error('[Filter] fetch error:', e)
-      select.disabled = false
+      if (ts) ts.enable()
+      else select.disabled = false
     }
   }
 
   resetSelect(select, disabled = true) {
-    const placeholder = select.dataset.filterPlaceholder || 'Select'
-    const option = document.createElement('option')
-
-    option.value = ''
-    option.textContent = placeholder
-
-    select.innerHTML = ''
-    select.appendChild(option)
-    select.value = ''
-    select.disabled = disabled
+    const ts = this.tomSelects.get(select)
+    if (ts) {
+      ts.clear(true)
+      ts.clearOptions()
+      disabled ? ts.disable() : ts.enable()
+    } else {
+      const placeholder = select.dataset.filterPlaceholder || 'Select'
+      select.innerHTML = `<option value="">${placeholder}</option>`
+      select.value = ''
+      select.disabled = disabled
+    }
   }
 
   currentParams() {
@@ -133,20 +227,15 @@ export default class extends Controller {
     const params = {}
 
     this.element.querySelectorAll('[data-filter-field-name]').forEach(el => {
-      if (el.value) params[el.dataset.filterFieldName] = el.value
+      const value = this.getFieldValue(el)
+      if (!this.isValueEmpty(value)) params[el.dataset.filterFieldName] = value
     })
 
-    const clean = Object.entries(params).reduce((acc, [k, v]) => {
-      if (v !== '' && v !== null && v !== undefined) acc[k] = v
-      return acc
-    }, {})
-
-    return { [rootKey]: clean }
+    return { [rootKey]: params }
   }
 
   saveState() {
     const state = this.currentParams()
-    // deterministic storage key that datatable can read
     try {
       localStorage.setItem(`filterState:${this.filterDtId}`, JSON.stringify(state))
     } catch (e) {
@@ -176,21 +265,13 @@ export default class extends Controller {
       if (el && !el.dataset.filterRemoteUrlValue) el.value = value
     })
 
-    // collect remote selects (as an array)
-    this.selects = Array.from(this.element.querySelectorAll('select[data-filter-remote-url-value]'))
+    const roots = this.remoteSelects.filter(s => !s.dataset.filterDependsOn)
 
-    // find root remote selects (no depends_on)
-    const roots = this.selects.filter(s => !s.dataset.filterDependsOn)
-
-    // populate each root -> then recursively populate dependents and restore values
     await Promise.all(roots.map(async (root) => {
       await this.populate(root)
-      // after root options exist, restore saved root value (if any)
       const sv = savedParams[root.dataset.filterFieldName]
-      const set_value = root.dataset.filterSetValue || ''
-
-      if (sv && !set_value) root.value = sv
-      // cascade down children
+      const hasSetValue = root.dataset.filterSetValue || root.dataset.filterSetValues
+      if (sv && !hasSetValue) this.setFieldValue(root, sv)
       await this.populateDependents(root, savedParams)
     }))
 
@@ -201,52 +282,49 @@ export default class extends Controller {
         const sd = this.element.querySelector('[data-filter-field-name="start_date"]')
         if (sd) sd.value = savedParams['start_date']
       }
-
       if (savedParams['end_date']) {
         const ed = this.element.querySelector('[data-filter-field-name="end_date"]')
         if (ed) ed.value = savedParams['end_date']
       }
     }
 
-    // emit event (use document, bubbles already) so any listener can catch
+    // emit event so any listener can catch
     const payload = this.currentParams()
     this.element.dispatchEvent(new CustomEvent('filters:ready', { detail: { params: payload }, bubbles: true }))
 
-    // also update deterministic storage (in case other code reads it)
     try {
       localStorage.setItem(`filterState:${this.filterDtId}`, JSON.stringify(payload))
     } catch (e) {}
+
+    if (Object.keys(payload[rootKey] || {}).length > 0) {
+      this.reloadAppDatatable()
+    }
   }
 
   // recursively populate children of parent, restore each child's saved value, then recurse
   async populateDependents(parent, savedParams = {}) {
-    this.selects = this.selects || Array.from(this.element.querySelectorAll('select[data-filter-remote-url-value]'))
     const parentKey = parent.dataset.filterFieldName
-    const children = this.selects.filter(s => s.dataset.filterDependsOn === parentKey)
+    const children = this.remoteSelects.filter(s => s.dataset.filterDependsOn === parentKey)
 
     for (const child of children) {
       this.resetSelect(child)
 
-      if (!parent.value) {
+      const parentValue = this.getFieldValue(parent)
+      if (this.isValueEmpty(parentValue)) {
         await this.populateDependents(child, savedParams)
         continue
       }
 
-      // populate child using parent's current value substituted by populate()
       await this.populate(child)
-      // restore child's saved value if exists
-      const childSaved = savedParams[child.dataset.filterFieldName]
-      const set_value = child.dataset.filterSetValue || ''
 
-      if (childSaved && !set_value) {
-        child.value = childSaved
-      }
-      // recurse deeper
+      const childSaved = savedParams[child.dataset.filterFieldName]
+      const hasSetValue = child.dataset.filterSetValue || child.dataset.filterSetValues
+      if (childSaved && !hasSetValue) this.setFieldValue(child, childSaved)
+
       await this.populateDependents(child, savedParams)
     }
   }
 
-  // duration handler (unchanged)
   durationChanged(event) {
     const select = event.target
 

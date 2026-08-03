@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+
 module StimulusRailsDatatables
   module FilterHelper
     def filter_for(datatable_id, root_key: 'filters', &)
@@ -39,6 +40,7 @@ module StimulusRailsDatatables
         else
           remote = options[:remote] || {}
           depends_on = options[:depends_on]
+          multiple = options[:multiple] || false
 
           attrs = {
             filter_field_name: name,
@@ -47,16 +49,22 @@ module StimulusRailsDatatables
             filter_value_key: remote[:value],
             filter_depends_on: depends_on&.to_s,
             filter_placeholder: remote[:placeholder] || 'Select an option',
-            filter_set_value: remote[:set_value]
+            filter_set_value: remote[:set_value],
+            filter_set_values: remote[:set_values],
+            filter_tomselect: options[:tomselect] 
+
           }
 
           select_options = {
             data: attrs,
-            class: html_class
+            class: html_class,
+            multiple: multiple
           }
 
           # Only disable if it depends on another field
           select_options[:disabled] = true if depends_on.present?
+          field_name = "#{field_name}[]" if multiple
+
 
           @view.select_tag(field_name, @view.options_for_select([]), **select_options)
         end
@@ -94,6 +102,8 @@ module StimulusRailsDatatables
             placeholder: 'All Barangays'
           },
           depends_on: :city_id,
+          multiple: true,
+          tomselect: true,
           class: html_class
         )
 
