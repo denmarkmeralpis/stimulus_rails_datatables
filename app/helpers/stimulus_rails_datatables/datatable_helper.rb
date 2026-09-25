@@ -8,6 +8,7 @@ module StimulusRailsDatatables
       length_change = options.fetch(:length_change, true)
       state_save = options.fetch(:state_save, true)
       responsive = options.fetch(:responsive, true)
+      reset_paging_on_filter = options.fetch(:reset_paging_on_filter, false)
       columns = []
 
       yield DatatableBuilder.new(columns)
@@ -21,7 +22,8 @@ module StimulusRailsDatatables
         datatable_searching_value: searching,
         datatable_length_change_value: length_change,
         datatable_state_save_value: state_save,
-        datatable_responsive_value: responsive
+        datatable_responsive_value: responsive,
+        datatable_reset_paging_on_filter_value: reset_paging_on_filter
       }
 
       content_tag(:div, data: data) do

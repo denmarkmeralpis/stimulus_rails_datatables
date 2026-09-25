@@ -92,6 +92,18 @@ import 'datatables_config'
 <% end %>
 ```
 
+By default, changing a filter keeps the DataTable on the current page. To reset
+to the first page when filters change, set `reset_paging_on_filter: true`:
+
+```ruby
+<%= datatable_for 'users-table',
+  source: users_path,
+  reset_paging_on_filter: true do |dt| %>
+  <% dt.column :id, title: 'ID' %>
+  <% dt.column :name, title: 'Name' %>
+<% end %>
+```
+
 ### Backend DataTable Class
 
 ```ruby

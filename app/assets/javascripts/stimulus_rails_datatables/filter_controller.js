@@ -70,8 +70,10 @@ export default class extends Controller {
       const datatable = new AppDataTable(`#${id}`).table
       const datatableUrl = datatable.ajax.url().split('?')[0]
       const params = this.toQuery(this.currentParams())
+      const datatableElement = document.getElementById(id)
+      const resetPaging = datatableElement?.closest('[data-datatable-reset-paging-on-filter-value]')?.dataset.datatableResetPagingOnFilterValue !== 'false'
 
-      datatable.ajax.url(`${datatableUrl}?${params}`).load()
+      datatable.ajax.url(`${datatableUrl}?${params}`).load(null, resetPaging)
     }
 
   }

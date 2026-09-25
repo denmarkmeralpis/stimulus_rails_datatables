@@ -161,7 +161,8 @@ AppDataTable.reloadAll()
   order: [[1, 'desc']],
   classes: 'table table-striped',
   searching: true,
-  length_change: true do |dt|
+  length_change: true,
+  reset_paging_on_filter: true do |dt|
   # columns...
 <% end %>
 ```
