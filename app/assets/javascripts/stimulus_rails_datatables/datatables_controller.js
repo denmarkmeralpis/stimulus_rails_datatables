@@ -17,7 +17,8 @@ export default class extends Controller {
     pagingType: { type: String, default: 'simple_numbers' },
     searching: { type: Boolean, default: true },
     lengthChange: { type: Boolean, default: true },
-    responsive: { type: Boolean, default: true }
+    responsive: { type: Boolean, default: true },
+    resetPaging: Boolean
   }
 
   connect() {
@@ -89,7 +90,8 @@ export default class extends Controller {
       const config = {
         language: { ...defaultConfig.language, ...(userConfig.language || {}) },
         layout: { ...defaultConfig.layout, ...(userConfig.layout || {}) },
-        lengthMenu: userConfig.lengthMenu || defaultConfig.lengthMenu
+        lengthMenu: userConfig.lengthMenu || defaultConfig.lengthMenu,
+        resetPaging: userConfig.resetPaging ?? defaultConfig.resetPaging
       }
 
       const responsiveValue = this.responsiveValue
@@ -107,6 +109,9 @@ export default class extends Controller {
         responsive: this.responsiveValue,
         language: config.language,
         layout: config.layout,
+        // Not a DataTables option; the filter controller reads it back via datatable.init()
+        // Per-table value (datatable_for reset_paging:) wins over the global config
+        resetPaging: this.hasResetPagingValue ? this.resetPagingValue : !!config.resetPaging,
         initComplete: function() {
           if (responsiveValue === false) {
             // Add overflow-x only to the table wrapper (not the whole layout) this is alternative of scrollX

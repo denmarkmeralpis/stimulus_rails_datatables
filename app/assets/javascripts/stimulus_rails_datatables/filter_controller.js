@@ -136,7 +136,8 @@ export default class extends Controller {
   }
 
   // reloadAppDatatable reloads the datatable with current params
-  async reloadAppDatatable() {
+  // pass resetPaging true/false to force it, otherwise the datatable's resetPaging setting is used
+  async reloadAppDatatable(resetPaging) {
     var id = this.element.dataset.filterDatatableId
 
     if (!id) {
@@ -147,7 +148,9 @@ export default class extends Controller {
       const datatableUrl = datatable.ajax.url().split('?')[0]
       const params = this.toQuery(this.currentParams())
 
-      datatable.ajax.url(`${datatableUrl}?${params}`).load(null, false)
+      if (typeof resetPaging !== 'boolean') resetPaging = datatable.init()?.resetPaging === true
+
+      datatable.ajax.url(`${datatableUrl}?${params}`).load(null, resetPaging)
     }
   }
 
@@ -296,8 +299,9 @@ export default class extends Controller {
       localStorage.setItem(`filterState:${this.filterDtId}`, JSON.stringify(payload))
     } catch (e) {}
 
+    // restoring saved filters is not a filter change, so keep the page restored by stateSave
     if (Object.keys(payload[rootKey] || {}).length > 0) {
-      this.reloadAppDatatable()
+      this.reloadAppDatatable(false)
     }
   }
 

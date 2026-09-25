@@ -335,9 +335,24 @@ window.datatablesConfig = {
   },
 
   // Length menu options
-  lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]]
+  lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+
+  // Go back to the first page when filters change (default: false)
+  resetPaging: true
 }
 ```
+
+### Resetting Pagination on Filter Change
+
+By default, changing a filter reloads the datatable and keeps the current page. Set `resetPaging: true` in `window.datatablesConfig` to jump back to the first page for every datatable, or override it per table with `reset_paging:`:
+
+```ruby
+<%= datatable_for 'users-table', source: users_path, reset_paging: false do |dt| %>
+  <% dt.column :name %>
+<% end %>
+```
+
+Leave `reset_paging:` out to use the global value. Restoring saved filters on page load never resets the page, so the page kept by `state_save` is not lost.
 
 ### Available Stimulus Controllers
 
