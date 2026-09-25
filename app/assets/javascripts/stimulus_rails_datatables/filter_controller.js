@@ -71,7 +71,7 @@ export default class extends Controller {
       const datatableUrl = datatable.ajax.url().split('?')[0]
       const params = this.toQuery(this.currentParams())
 
-      datatable.ajax.url(`${datatableUrl}?${params}`).load(null, false)
+      datatable.ajax.url(`${datatableUrl}?${params}`).load()
     }
 
   }
