@@ -30,7 +30,10 @@ let datatablesConfig = {
   },
 
   // Length menu options
-  lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]]
+  lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+
+  // Go back to the first page when filters change (override per table with datatable_for reset_paging:)
+  resetPaging: false
 }
 
 // Function to let the app override defaults
