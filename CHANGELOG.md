@@ -5,10 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.0] - 2026-09-25
 
 ### Added
-- `resetPaging` global config and `reset_paging` option for `datatable_for` to go back to the first page when filters change
+- `resetPaging` global config option (`window.datatablesConfig` or `setDatatablesConfig`) to go back to the first page when filters change; defaults to `false`
+- `reset_paging` option for the `datatable_for` helper, which overrides the global `resetPaging` value per datatable
+
+## [0.6.0] - 2026-08-03
+
+### Added
+- Tom-Select support for remote filter selects via the `tomselect` option
+- `multiple` option for remote filter selects, sending the selected values as array params (`filters[key][]=`)
+- `set_values` remote option to preselect multiple values
+- Summary label showing the number of selected items on Tom-Select multi-selects
+
+### Changed
+- The `location` filter's barangay select is now a Tom-Select multi-select
+- The filter controller imports `tom-select`, so the host app must pin it in its importmap
 
 ## [0.5.1] - 2026-07-28
 
